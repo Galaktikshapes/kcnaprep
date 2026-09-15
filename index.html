@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KCNA Tracker</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background: #f0f2f5; color: #1a1a1a; font-size: 16px; line-height: 1.5; }
+  h1 { color: #326ce5; font-size: 22px; margin: 0 0 4px 0; }
+  h2 { color: #333; font-size: 18px; margin: 20px 0 10px 0; }
+  h3 { font-size: 16px; margin: 0 0 12px 0; color: #222; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .menu-btn { display: block; width: 100%; padding: 18px; margin: 10px 0; font-size: 17px; background: white; border: 2px solid #326ce5; color: #326ce5; border-radius: 12px; cursor: pointer; font-weight: 600; text-align: left; }
+  .menu-btn .badge { float: right; background: #326ce5; color: white; padding: 2px 10px; border-radius: 12px; font-size: 13px; }
+  .question { background: white; padding: 18px; margin-bottom: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .domain-tag { font-size: 11px; background: #326ce5; color: white; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+  label { display: block; padding: 14px 12px; margin: 6px 0; cursor: pointer; border-radius: 10px; border: 2px solid #e0e0e0; background: #fafafa; font-size: 15px; }
+  label.selected { background: #eef3ff; border-color: #326ce5; }
+  input[type="radio"] { margin-right: 10px; transform: scale(1.3); }
+  .btn { display: block; width: 100%; background: #326ce5; color: white; border: none; padding: 16px; font-size: 17px; border-radius: 12px; cursor: pointer; margin-top: 12px; font-weight: 600; }
+  .btn-danger { background: #dc3545; }
+  .btn-secondary { background: #6c757d; }
+  .results { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .score-box { font-size: 42px; font-weight: bold; text-align: center; margin: 16px 0; }
+  .pass { color: #28a745; }
+  .fail { color: #dc3545; }
+  .domain-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+  .focus-list { background: #fff3cd; padding: 16px; border-radius: 10px; margin-top: 16px; border-left: 4px solid #ffc107; }
+  .focus-list ul { margin: 10px 0 0 0; padding-left: 20px; }
+  .focus-list li { margin: 6px 0; font-size: 14px; }
+  .review-item { padding: 14px; margin: 10px 0; border-radius: 10px; border-left: 5px solid #ccc; }
+  .review-item.correct { background: #d4edda; border-left-color: #28a745; }
+  .review-item.wrong { background: #f8d7da; border-left-color: #dc3545; }
+  .review-item .label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #666; }
+  .explanation { margin-top: 8px; padding: 10px; background: rgba(255,255,255,0.6); border-radius: 6px; font-size: 14px; }
+  .note-box { margin-top: 10px; }
+  .note-box textarea { width: 100%; min-height: 70px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: inherit; font-size: 14px; }
+  .history-item { background: white; padding: 14px; margin: 8px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .history-item .date { color: #666; font-size: 13px; }
+  .history-item .score { font-weight: bold; font-size: 18px; }
+  .empty { text-align: center; color: #999; padding: 40px 20px; }
+  .weak-topic { background: #f8d7da; padding: 10px; margin: 6px 0; border-radius: 8px; font-size: 14px; }
+  .weak-topic .count { font-weight: bold; color: #dc3545; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .back-btn { background: none; border: none; color: #326ce5; font-size: 16px; cursor: pointer; padding: 8px; font-weight: 600; }
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; background: white; padding: 14px; margin: 8px 0; border-radius: 10px; }
+  .toggle { position: relative; width: 50px; height: 28px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #ccc; border-radius: 28px; transition: .3s; }
+  .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
+  .toggle input:checked + .slider { background: #326ce5; }
+  .toggle input:checked + .slider:before { transform: translateX(22px); }
+  .timer-display { background: #326ce5; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 16px; }
+  .timer-display.warning { background: #dc3545; }
+  .settings-section { background: white; padding: 16px; margin: 12px 0; border-radius: 12px; }
+</style>
+</head>
+<body>
+
+<div id="app">Loading...</div>
+
+<script>
+var QUESTIONS = [
+  {round:1, q:1, domain:"K8s Fundamentals", correct:"B", page:77, explanation:"Pod is the smallest deployable resource in Kubernetes.", text:"What is the smallest deployable unit in Kubernetes?", options:{A:"Container", B:"Pod", C:"Deployment", D:"ReplicaSet"}},
+  {round:1, q:2, domain:"K8s Fundamentals", correct:"C", page:51, explanation:"kube-apiserver is the entry point for all commands and the central communication hub.", text:"Which component is the central communication hub of a Kubernetes cluster?", options:{A:"kubelet", B:"kube-scheduler", C:"kube-apiserver", D:"etcd"}},
+  {round:1, q:3, domain:"K8s Fundamentals", correct:"B", page:52, explanation:"etcd is the central data store holding the complete cluster state.", text:"Which component stores the complete state of the Kubernetes cluster?", options:{A:"kube-apiserver", B:"etcd", C:"kube-controller-manager", D:"kube-scheduler"}},
+  {round:1, q:4, domain:"K8s Fundamentals", correct:"B", page:53, explanation:"kube-scheduler decides which worker node a Pod should run on.", text:"What is the role of the kube-scheduler?", options:{A:"Runs containers on worker nodes", B:"Decides which worker node a Pod should run on", C:"Stores cluster state", D:"Exposes the Kubernetes API"}},
+  {round:1, q:5, domain:"K8s Fundamentals", correct:"C", page:56, explanation:"kubelet is the agent on the worker node that ensures containers run.", text:"What is the role of the kubelet?", options:{A:"Schedules Pods to nodes", B:"Stores cluster state", C:"Agent on the worker node that ensures containers run", D:"Manages network routing"}},
+  {round:1, q:6, domain:"K8s Fundamentals", correct:"B", page:54, explanation:"kube-controller-manager runs control loops to make actual state match desired state.", text:"What does the kube-controller-manager do?", options:{A:"Manages container runtime", B:"Runs control loops to make actual state match desired state", C:"Exposes the Kubernetes API", D:"Provides DNS resolution"}},
+  {round:1, q:7, domain:"K8s Fundamentals", correct:"B", page:56, explanation:"kube-proxy handles network routing on each worker node.", text:"Which component handles network routing on each worker node?", options:{A:"kubelet", B:"kube-proxy", C:"kube-scheduler", D:"etcd"}},
+  {round:1, q:8, domain:"K8s Fundamentals", correct:"B", page:50, explanation:"Kubernetes namespaces are logical groupings for multi-tenancy, NOT kernel namespaces.", text:"What is a Kubernetes namespace?", options:{A:"A kernel isolation feature for containers", B:"A logical grouping of cluster resources for multi-tenancy", C:"A type of Pod", D:"A network policy"}},
+  {round:1, q:9, domain:"K8s Fundamentals", correct:"B", page:50, explanation:"Workloads continue running if the control plane becomes unavailable.", text:"Which statement about Kubernetes control plane and worker nodes is correct?", options:{A:"Worker nodes make their own scheduling decisions", B:"Workloads continue running if the control plane becomes unavailable", C:"Control plane nodes run application containers", D:"Worker nodes store cluster state"}},
+  {round:1, q:10, domain:"K8s Fundamentals", correct:"C", page:51, explanation:"kube-apiserver handles HTTPS on port 6443 by default.", text:"What is the Kubernetes API default port?", options:{A:"80", B:"443", C:"6443", D:"8080"}},
+  {round:2, q:11, domain:"K8s Fundamentals", correct:"B", page:82, explanation:"ReplicaSet ensures a stable set of identical Pods at any given time.", text:"Which object ensures a specified number of identical Pods are always running?", options:{A:"Pod", B:"ReplicaSet", C:"DaemonSet", D:"Job"}},
+  {round:2, q:12, domain:"K8s Fundamentals", correct:"C", page:82, explanation:"Deployment manages stateless applications with rolling updates and rollbacks.", text:"Which object manages rolling updates and rollbacks for stateless apps?", options:{A:"ReplicaSet", B:"StatefulSet", C:"Deployment", D:"DaemonSet"}},
+  {round:2, q:13, domain:"K8s Fundamentals", correct:"C", page:82, explanation:"StatefulSet is designed for stateful applications requiring stable identities and persistent storage.", text:"Which object is best for a database requiring stable identity and persistent storage?", options:{A:"Deployment", B:"ReplicaSet", C:"StatefulSet", D:"DaemonSet"}},
+  {round:2, q:14, domain:"K8s Fundamentals", correct:"C", page:83, explanation:"DaemonSet ensures a specific Pod runs on every node (or subset).", text:"Which object ensures a Pod runs on every node in the cluster?", options:{A:"Deployment", B:"StatefulSet", C:"DaemonSet", D:"ReplicaSet"}},
+  {round:2, q:15, domain:"K8s Fundamentals", correct:"B", page:83, explanation:"Job runs finite, one-time tasks to completion.", text:"Which object runs finite, one-time tasks to completion?", options:{A:"Deployment", B:"Job", C:"DaemonSet", D:"StatefulSet"}},
+  {round:2, q:16, domain:"Container Orchestration", correct:"C", page:85, explanation:"ClusterIP is the default and most common Service type.", text:"What is the default Service type in Kubernetes?", options:{A:"NodePort", B:"LoadBalancer", C:"ClusterIP", D:"ExternalName"}},
+  {round:2, q:17, domain:"Container Orchestration", correct:"C", page:87, explanation:"LoadBalancer extends NodePort by provisioning an external load balancer.", text:"Which Service type provisions an external load balancer?", options:{A:"ClusterIP", B:"NodePort", C:"LoadBalancer", D:"ExternalName"}},
+  {round:2, q:18, domain:"Container Orchestration", correct:"A", page:88, explanation:"A headless Service has no ClusterIP assigned.", text:"What is a headless Service?", options:{A:"A Service without a ClusterIP", B:"A Service without Pods", C:"A Service without a selector", D:"A Service without a port"}},
+  {round:2, q:19, domain:"Container Orchestration", correct:"B", page:89, explanation:"Ingress exposes HTTP and HTTPS endpoints from outside the cluster to internal Services.", text:"What is Ingress used for?", options:{A:"Internal load balancing", B:"HTTP/HTTPS routing from outside the cluster to Services", C:"Storage provisioning", D:"Container runtime management"}},
+  {round:2, q:20, domain:"Container Orchestration", correct:"A", page:97, explanation:"NetworkPolicy is a cluster-wide firewall controlling Pod communication.", text:"What is a NetworkPolicy?", options:{A:"A cluster-wide firewall controlling Pod communication", B:"A type of Service", C:"A storage policy", D:"A scheduling rule"}}
+    ,{round:3, q:21, domain:"Container Orchestration", correct:"A", page:32, explanation:"The 4C's are Code, Container, Cluster, Cloud.", text:"What is the 4C's of Cloud Native Security?", options:{A:"Code, Container, Cluster, Cloud", B:"Container, Cluster, Cloud, Configuration", C:"Code, Compute, Cluster, Cloud", D:"Container, Compute, Cluster, Configuration"}},
+  {round:3, q:22, domain:"Container Orchestration", correct:"A", page:42, explanation:"CSI provides a standard for storage plugins in orchestration systems.", text:"What is the purpose of the Container Storage Interface (CSI)?", options:{A:"To provide a standard for storage plugins in orchestration systems", B:"To manage container networking", C:"To run containers", D:"To schedule Pods"}},
+  {round:3, q:23, domain:"Container Orchestration", correct:"B", page:104, explanation:"A PersistentVolume is a piece of storage in the cluster provisioned by an admin or dynamically.", text:"What is a PersistentVolume (PV)?", options:{A:"A request for storage", B:"A piece of storage in the cluster", C:"A type of Pod", D:"A container image"}},
+  {round:3, q:24, domain:"Container Orchestration", correct:"B", page:106, explanation:"A PVC is a user's request for storage, similar to how a Pod requests CPU and memory.", text:"What is a PersistentVolumeClaim (PVC)?", options:{A:"Actual storage in the cluster", B:"A user's request for storage", C:"A type of Pod", D:"A storage driver"}},
+  {round:3, q:25, domain:"Container Orchestration", correct:"B", page:108, explanation:"StorageClass defines how dynamic volume provisioning works.", text:"What does a StorageClass define?", options:{A:"A type of Pod", B:"How dynamic volume provisioning works", C:"A network policy", D:"A container runtime"}},
+  {round:3, q:26, domain:"Container Orchestration", correct:"B", page:113, explanation:"ConfigMaps store configuration as key-value pairs or files, independent of Pods.", text:"What is a ConfigMap used for?", options:{A:"Storing sensitive data", B:"Storing configuration as key-value pairs independent of Pods", C:"Running containers", D:"Scheduling Pods"}},
+  {round:3, q:27, domain:"Container Orchestration", correct:"B", page:114, explanation:"Secrets are for sensitive data, stored in base64 encoding. Base64 is NOT encryption.", text:"What is important to know about Kubernetes Secrets?", options:{A:"They are encrypted by default", B:"Base64 encoding is NOT encryption", C:"They cannot be mounted as files", D:"They are stored in the container image"}},
+  {round:3, q:28, domain:"Container Orchestration", correct:"B", page:116, explanation:"HPA monitors metrics like CPU or memory and adjusts the number of Pod replicas.", text:"What does the Horizontal Pod Autoscaler (HPA) do?", options:{A:"Adds more CPU to a Pod", B:"Adjusts the number of Pod replicas based on metrics", C:"Adds worker nodes", D:"Increases Pod memory limits"}},
+  {round:3, q:29, domain:"Container Orchestration", correct:"B", page:118, explanation:"nodeSelector matches Pods to nodes using labels. It is a hard filter.", text:"What does the nodeSelector field do in a Pod specification?", options:{A:"Selects which Pods to run", B:"Matches Pods to nodes using labels", C:"Selects container images", D:"Selects namespaces"}},
+  {round:3, q:30, domain:"Container Orchestration", correct:"B", page:123, explanation:"Taints repel Pods from nodes; tolerations allow scheduling despite taints.", text:"What is the purpose of taints and tolerations?", options:{A:"To encrypt network traffic", B:"To control which Pods can be scheduled on which nodes", C:"To store configuration", D:"To manage storage"}},
+  {round:4, q:31, domain:"K8s Fundamentals", correct:"B", page:77, explanation:"All containers in a Pod share the same IP address and can communicate over localhost.", text:"How do containers within the same Pod communicate?", options:{A:"Through external DNS", B:"Over localhost, sharing the same IP", C:"Through a Service", D:"Through Ingress"}},
+  {round:4, q:32, domain:"K8s Fundamentals", correct:"B", page:78, explanation:"initContainers run sequentially and must complete successfully before main containers start.", text:"What is the purpose of initContainers in a Pod?", options:{A:"They run after the main container", B:"They run sequentially before the main container starts", C:"They provide network routing", D:"They store persistent data"}},
+  {round:4, q:33, domain:"K8s Fundamentals", correct:"B", page:79, explanation:"livenessProbe configures health checks; if it fails, Kubernetes can restart the container.", text:"What does a livenessProbe do?", options:{A:"Stores data persistently", B:"Checks if the application is still running and restarts if needed", C:"Routes network traffic", D:"Schedules Pods"}},
+  {round:4, q:34, domain:"K8s Fundamentals", correct:"B", page:80, explanation:"In the Pending phase, the Pod has been accepted but containers have not yet been created.", text:"What does the Pending phase mean in the Pod lifecycle?", options:{A:"The Pod is running", B:"The Pod has been accepted but containers have not yet been created", C:"The Pod has failed", D:"The Pod has succeeded"}},
+  {round:4, q:35, domain:"K8s Fundamentals", correct:"B", page:80, explanation:"In the Running phase, the Pod has been assigned to a node and all containers have been created.", text:"What does the Running phase mean in the Pod lifecycle?", options:{A:"The Pod is being scheduled", B:"The Pod has been assigned to a node and all containers created", C:"The Pod has failed", D:"The Pod is terminating"}},
+  {round:4, q:36, domain:"K8s Fundamentals", correct:"B", page:59, explanation:"Authentication verifies who is making the request. Kubernetes does not manage human users internally.", text:"What does Authentication do in the Kubernetes API?", options:{A:"Determines what actions are allowed", B:"Verifies who is making the request", C:"Modifies the request", D:"Stores the request"}},
+  {round:4, q:37, domain:"K8s Fundamentals", correct:"B", page:59, explanation:"Authorization determines what the authenticated requester is allowed to do.", text:"What does Authorization do in the Kubernetes API?", options:{A:"Verifies identity", B:"Determines what actions are allowed", C:"Stores cluster state", D:"Schedules Pods"}},
+  {round:4, q:38, domain:"K8s Fundamentals", correct:"B", page:59, explanation:"Admission controllers can validate or modify the request before it is accepted.", text:"What does Admission Control do in the Kubernetes API?", options:{A:"Verifies identity", B:"Validates or modifies the request before acceptance", C:"Stores cluster state", D:"Routes network traffic"}},
+  {round:4, q:39, domain:"K8s Fundamentals", correct:"B", page:61, explanation:"containerd is a lightweight, high-performance runtime and the most widely adopted option.", text:"Which container runtime is currently the most widely adopted in Kubernetes?", options:{A:"Docker", B:"containerd", C:"CRI-O", D:"rkt"}},
+  {round:4, q:40, domain:"K8s Fundamentals", correct:"A", page:61, explanation:"Docker support was deprecated and fully removed in Kubernetes 1.24.", text:"What happened to Docker support in Kubernetes?", options:{A:"Deprecated and removed in Kubernetes 1.24", B:"Still the default runtime", C:"Replaced by rkt", D:"Never supported"}},
+  {round:5, q:41, domain:"K8s Fundamentals", correct:"B", page:63, explanation:"Network Policies are internal firewalls enforced by the cluster's network plugin.", text:"What enforces Network Policies in Kubernetes?", options:{A:"kube-proxy", B:"The cluster's network plugin", C:"kubelet", D:"etcd"}},
+  {round:5, q:42, domain:"K8s Fundamentals", correct:"B", page:64, explanation:"The scheduler uses information provided by the user such as CPU and memory requests.", text:"What does kube-scheduler use to make scheduling decisions?", options:{A:"Artificial intelligence", B:"User-provided info like CPU and memory requests", C:"Random selection", D:"Container image size"}},
+  {round:5, q:43, domain:"K8s Fundamentals", correct:"B", page:64, explanation:"The scheduler chooses the node with the fewest running Pods when multiple are suitable.", text:"If multiple nodes are suitable for a Pod, which one does the scheduler choose?", options:{A:"The first node", B:"The one with the fewest running Pods", C:"The largest node", D:"The newest node"}},
+  {round:5, q:44, domain:"K8s Fundamentals", correct:"B", page:72, explanation:"kubectl is the official command-line tool for interacting with the Kubernetes API.", text:"What is kubectl?", options:{A:"A container runtime", B:"The official command-line tool for Kubernetes", C:"A Kubernetes distribution", D:"A monitoring tool"}},
+  {round:5, q:45, domain:"K8s Fundamentals", correct:"B", page:76, explanation:"Helm is a package manager for Kubernetes that packages collections of objects into Charts.", text:"What is Helm?", options:{A:"A Kubernetes distribution", B:"A package manager for Kubernetes", C:"A container runtime", D:"A monitoring tool"}},
+  {round:5, q:46, domain:"Cloud Native App Delivery", correct:"B", page:139, explanation:"Git is a distributed version control system where every contributor has a complete copy of the repository.", text:"What is Git?", options:{A:"A container runtime", B:"A distributed version control system", C:"A Kubernetes component", D:"A CI/CD tool"}},
+  {round:5, q:47, domain:"Cloud Native App Delivery", correct:"B", page:141, explanation:"CI focuses on automatically building and testing code whenever changes are made.", text:"What does Continuous Integration (CI) focus on?", options:{A:"Deploying to production", B:"Automatically building and testing code on changes", C:"Monitoring applications", D:"Storing container images"}},
+  {round:5, q:48, domain:"Cloud Native App Delivery", correct:"B", page:141, explanation:"CD automates the deployment of built artifacts to environments.", text:"What does Continuous Delivery (CD) automate?", options:{A:"Code writing", B:"Deployment of built artifacts to environments", C:"Container runtime management", D:"Monitoring"}},
+  {round:5, q:49, domain:"Cloud Native App Delivery", correct:"B", page:140, explanation:"IaC defines infrastructure as configuration files rather than manual setup.", text:"What is Infrastructure as Code (IaC)?", options:{A:"Writing application code for infrastructure", B:"Defining infrastructure as configuration files", C:"A programming language", D:"A cloud provider service"}},
+  {round:5, q:50, domain:"Cloud Native App Delivery", correct:"A", page:143, explanation:"GitOps uses Git as the single source of truth for infrastructure and application state.", text:"What is GitOps?", options:{A:"Using Git as the single source of truth for infrastructure and application state", B:"A Git hosting service", C:"A CI/CD tool", D:"A Kubernetes distribution"}},
+  {round:6, q:51, domain:"Cloud Native App Delivery", correct:"B", page:146, explanation:"Argo CD is a GitOps-based Continuous Delivery tool built for Kubernetes.", text:"What is Argo CD?", options:{A:"A container runtime", B:"A GitOps-based Continuous Delivery tool for Kubernetes", C:"A monitoring tool", D:"A service mesh"}},
+  {round:6, q:52, domain:"Cloud Native App Delivery", correct:"B", page:147, explanation:"ApplicationSet automates creation of multiple Argo CD Applications from one manifest.", text:"What is an Argo CD ApplicationSet?", options:{A:"A single Argo CD Application", B:"A resource that automates creation of multiple Argo CD Applications", C:"A Kubernetes Deployment", D:"A CI/CD pipeline"}},
+  {round:6, q:53, domain:"Cloud Native Architecture", correct:"A", page:1, explanation:"Cloud native architecture optimizes for cost efficiency, reliability, and faster time-to-market.", text:"What is cloud native architecture optimized for?", options:{A:"Cost efficiency, reliability, and faster time-to-market", B:"Only cost efficiency", C:"Only reliability", D:"Only speed"}},
+  {round:6, q:54, domain:"Cloud Native Architecture", correct:"B", page:2, explanation:"Monolithic is a single deployable unit; microservices are decoupled applications communicating over a network.", text:"What is the main difference between monolithic and microservices architecture?", options:{A:"Monolithic uses containers, microservices use VMs", B:"Monolithic is a single unit; microservices are decoupled apps", C:"Monolithic is cloud native", D:"They are the same"}},
+  {round:6, q:55, domain:"Cloud Native Architecture", correct:"B", page:6, explanation:"Horizontal scaling adds more instances of an application.", text:"What is horizontal scaling?", options:{A:"Adding more resources to a single server", B:"Adding more instances of an application", C:"Increasing CPU on a server", D:"Adding more RAM"}},
+  {round:6, q:56, domain:"Cloud Native Architecture", correct:"B", page:6, explanation:"Vertical scaling adds more resources (CPU, memory) to a single server.", text:"What is vertical scaling?", options:{A:"Adding more servers", B:"Adding more resources to a single server", C:"Adding more containers", D:"Adding more Pods"}},
+  {round:6, q:57, domain:"Cloud Native Architecture", correct:"B", page:8, explanation:"Serverless computing means the cloud provider manages infrastructure; developers provide code.", text:"What does serverless computing mean?", options:{A:"No servers are involved", B:"The cloud provider manages infrastructure; developers provide code", C:"Only functions are used", D:"Containers are not used"}},
+  {round:6, q:58, domain:"Cloud Native Architecture", correct:"A", page:158, explanation:"The three pillars of observability are logs, metrics, and traces.", text:"What are the three pillars of observability?", options:{A:"Logs, Metrics, Traces", B:"CPU, Memory, Disk", C:"Pods, Services, Deployments", D:"Alerts, Dashboards, Reports"}},
+  {round:6, q:59, domain:"Cloud Native Architecture", correct:"B", page:165, explanation:"Prometheus is an open source monitoring system that collects metrics as time-series data.", text:"What is Prometheus?", options:{A:"A container runtime", B:"An open source monitoring system that collects metrics", C:"A service mesh", D:"A CI/CD tool"}},
+  {round:6, q:60, domain:"Cloud Native Architecture", correct:"A", page:25, explanation:"Containers share the host kernel; VMs have their own OS.", text:"What is the key difference between containers and virtual machines?", options:{A:"Containers share the host kernel; VMs have their own OS", B:"Containers are slower to start", C:"VMs are lighter than containers", D:"Containers emulate hardware"}}
+    ,{round:7, q:61, domain:"Cloud Native Architecture", correct:"A", page:15, explanation:"Sandbox is the entry-level stage for early-stage or experimental projects.", text:"What is the Sandbox stage in the CNCF project maturity model?", options:{A:"Entry-level stage for experimental projects", B:"Mid-level stage for production-ready projects", C:"Highest stage for widely adopted projects", D:"Deprecated stage"}},
+  {round:7, q:62, domain:"Cloud Native Architecture", correct:"B", page:16, explanation:"Incubating requires 3+ independent end-user organizations and a healthy committer base.", text:"How many independent end-user organizations must use an Incubating CNCF project?", options:{A:"At least 1", B:"At least 3", C:"At least 10", D:"No minimum"}},
+  {round:7, q:63, domain:"Cloud Native Architecture", correct:"B", page:17, explanation:"Graduated requires a third-party security audit with publicly published results.", text:"What does a Graduated CNCF project require?", options:{A:"Only a GitHub star count", B:"Third-party security audit and 2+ organizational commitments", C:"No additional requirements", D:"Only a TOC vote"}},
+  {round:7, q:64, domain:"Cloud Native Architecture", correct:"B", page:160, explanation:"OpenTelemetry is a CNCF project created from merging OpenTracing and OpenCensus.", text:"Which two projects merged to create OpenTelemetry?", options:{A:"Jaeger and Prometheus", B:"OpenTracing and OpenCensus", C:"Fluentd and Filebeat", D:"Grafana and Loki"}},
+  {round:7, q:65, domain:"Cloud Native Architecture", correct:"B", page:160, explanation:"OpenTelemetry is not an observability backend; it provides instrumentation and data pipeline.", text:"What is OpenTelemetry?", options:{A:"An observability backend", B:"An observability framework and toolkit", C:"A monitoring system", D:"A log storage system"}},
+  {round:7, q:66, domain:"Cloud Native Architecture", correct:"B", page:158, explanation:"Metrics are quantitative measurements taken over time.", text:"What are metrics in observability?", options:{A:"Messages emitted by applications", B:"Quantitative measurements taken over time", C:"Lifecycle of a request across services", D:"Configuration files"}},
+  {round:7, q:67, domain:"Cloud Native Architecture", correct:"B", page:158, explanation:"Traces track the lifecycle of a request through a distributed system.", text:"What are traces in observability?", options:{A:"Messages emitted by applications", B:"Records that track the lifecycle of a request through a distributed system", C:"Quantitative measurements", D:"Config files"}},
+  {round:7, q:68, domain:"Cloud Native Architecture", correct:"B", page:37, explanation:"A service mesh deploys a lightweight proxy alongside every container.", text:"What does a service mesh deploy alongside every container?", options:{A:"A monitoring agent", B:"A lightweight proxy", C:"A database", D:"A load balancer"}},
+
+  {round:8, q:69, domain:"Cloud Native Architecture", correct:"B", page:11, explanation:"SRE was founded around 2003 at Google.", text:"Where was Site Reliability Engineering (SRE) founded?", options:{A:"Amazon", B:"Google", C:"Microsoft", D:"Netflix"}},
+  {round:8, q:70, domain:"Cloud Native Architecture", correct:"A", page:13, explanation:"SLO = Service Level Objective: a target level for the reliability of your service.", text:"What does SLO stand for?", options:{A:"Service Level Objective", B:"Service Logic Operation", C:"System Latency Output", D:"Service Load Orchestration"}},
+  {round:8, q:71, domain:"Cloud Native Architecture", correct:"B", page:13, explanation:"SLI = Service Level Indicator: a carefully defined quantitative measure of service level.", text:"What does SLI stand for?", options:{A:"Service Logic Input", B:"Service Level Indicator", C:"System Latency Index", D:"Service Load Instance"}},
+  {round:8, q:72, domain:"Cloud Native Architecture", correct:"A", page:14, explanation:"SLA = Service Level Agreement: a contract with consequences if SLOs are missed.", text:"What does SLA stand for?", options:{A:"Service Level Agreement", B:"System Log Analysis", C:"Service Logic Automation", D:"Standard Latency Average"}},
+  {round:8, q:73, domain:"Cloud Native Architecture", correct:"B", page:14, explanation:"An error budget defines the number of errors allowed before action is taken.", text:"What is an error budget?", options:{A:"A financial plan for cloud costs", B:"Number of errors allowed before action is taken", C:"A type of Service Level Agreement", D:"A monitoring dashboard"}},
+  {round:8, q:74, domain:"Cloud Native Architecture", correct:"A", page:4, explanation:"Cloud native architecture is characterized by automation, self-healing, scalability, cost-efficiency, and security by default.", text:"Which of these is a characteristic of cloud native architecture?", options:{A:"Self-healing", B:"Monolithic design", C:"Manual deployment", D:"Single-tenant only"}},
+  {round:8, q:75, domain:"Cloud Native Architecture", correct:"B", page:5, explanation:"Zero-trust computing requires authentication for every user and process.", text:"What does zero-trust computing require?", options:{A:"Trusting all users inside the network", B:"Authentication for every user and process", C:"Disabling all firewalls", D:"Single-factor authentication"}},
+  {round:8, q:76, domain:"Cloud Native Architecture", correct:"B", page:5, explanation:"The Twelve-Factor App is a set of guidelines for developing cloud native applications.", text:"What is the Twelve-Factor App?", options:{A:"A Kubernetes distribution", B:"A set of guidelines for developing cloud native applications", C:"A monitoring tool", D:"A service mesh"}},
+
+  {round:9, q:77, domain:"K8s Fundamentals", correct:"B", page:48, explanation:"Control plane nodes are the brains of the cluster; worker nodes run applications.", text:"What is the difference between control plane nodes and worker nodes?", options:{A:"Control plane runs apps; worker nodes make decisions", B:"Control plane makes decisions; worker nodes run applications", C:"They are the same", D:"Worker nodes store cluster state"}},
+  {round:9, q:78, domain:"K8s Fundamentals", correct:"B", page:71, explanation:"The apiVersion field specifies which version of the object's schema is being used.", text:"What does the apiVersion field in a Kubernetes YAML file specify?", options:{A:"The cluster version", B:"The version of the object's schema", C:"The Kubernetes API port", D:"The namespace"}},
+  {round:9, q:79, domain:"K8s Fundamentals", correct:"B", page:71, explanation:"The kind field defines the type of Kubernetes object.", text:"What does the kind field in a Kubernetes YAML file define?", options:{A:"The container image", B:"The type of Kubernetes object", C:"The namespace", D:"The resource limits"}},
+  {round:9, q:80, domain:"K8s Fundamentals", correct:"B", page:71, explanation:"The metadata field contains identifying information such as the object's name.", text:"What does the metadata field in a Kubernetes YAML file contain?", options:{A:"Container images", B:"Identifying information such as the object's name", C:"Resource limits", D:"Network policies"}},
+  {round:9, q:81, domain:"K8s Fundamentals", correct:"B", page:71, explanation:"The spec field describes the desired state of the object.", text:"What does the spec field in a Kubernetes YAML file describe?", options:{A:"The current state", B:"The desired state of the object", C:"The namespace", D:"The API version"}},
+  {round:9, q:82, domain:"K8s Fundamentals", correct:"B", page:59, explanation:"RBAC is the default and primary authorization framework in Kubernetes.", text:"What is the default authorization framework in Kubernetes?", options:{A:"ABAC", B:"RBAC", C:"LDAP", D:"OAuth"}},
+  {round:9, q:83, domain:"K8s Fundamentals", correct:"B", page:129, explanation:"A RoleBinding grants permissions within a namespace.", text:"What is the difference between a RoleBinding and a ClusterRoleBinding?", options:{A:"They are the same", B:"RoleBinding is namespace-scoped; ClusterRoleBinding is cluster-wide", C:"RoleBinding is cluster-wide; ClusterRoleBinding is namespace-scoped", D:"Only ClusterRoleBinding exists"}},
+  {round:9, q:84, domain:"K8s Fundamentals", correct:"B", page:132, explanation:"Pod Security Standards define three levels: Privileged, Baseline, and Restricted.", text:"What are the three Pod Security Standards levels?", options:{A:"Low, Medium, High", B:"Privileged, Baseline, Restricted", C:"Basic, Standard, Advanced", D:"Open, Closed, Locked"}},
+
+  {round:10, q:85, domain:"Container Orchestration", correct:"B", page:34, explanation:"An overlay network spans multiple hosts, enabling container-to-container communication.", text:"What is an overlay network used for in container orchestration?", options:{A:"Isolating containers on a single host", B:"Enabling container-to-container communication across multiple hosts", C:"Storing container images", D:"Managing container permissions"}},
+  {round:10, q:86, domain:"Container Orchestration", correct:"B", page:36, explanation:"Service Discovery allows containers to find and communicate dynamically.", text:"What is Service Discovery?", options:{A:"Manual configuration of IP addresses", B:"Automatically tracking and finding services in a dynamic environment", C:"Storing container images", D:"Managing container permissions"}},
+  {round:10, q:87, domain:"Container Orchestration", correct:"B", page:36, explanation:"etcd, Consul, and Apache Zookeeper are common key-value store approaches to Service Discovery.", text:"Which of these is a key-value store used for Service Discovery?", options:{A:"Docker Hub", B:"etcd", C:"GitHub", D:"Kubernetes Dashboard"}},
+  {round:10, q:88, domain:"Container Orchestration", correct:"B", page:40, explanation:"The read-write layer sits on top of the read-only image layers.", text:"What happens to the read-write layer when a container stops?", options:{A:"It is preserved", B:"It is lost", C:"It is moved to a volume", D:"It is saved to a PersistentVolume"}},
+  {round:10, q:89, domain:"Container Orchestration", correct:"B", page:41, explanation:"Volumes mount specific host directories into the container to preserve data.", text:"Why are volumes used with containers?", options:{A:"To speed up containers", B:"To preserve data beyond the container's lifecycle", C:"To reduce image size", D:"To improve security"}},
+  {round:10, q:90, domain:"Container Orchestration", correct:"B", page:42, explanation:"The Container Storage Interface provides a vendor-neutral way to work with storage backends.", text:"What is the purpose of the Container Storage Interface (CSI)?", options:{A:"To manage container networking", B:"To provide a standard for storage plugins in orchestration systems", C:"To run containers", D:"To schedule Pods"}},
+  {round:10, q:91, domain:"Container Orchestration", correct:"B", page:117, explanation:"KEDA was launched in 2019 by Microsoft and Red Hat.", text:"What is KEDA?", options:{A:"A container runtime", B:"Kubernetes-based Event Driven Autoscaler", C:"A monitoring tool", D:"A service mesh"}},
+  {round:10, q:92, domain:"Container Orchestration", correct:"B", page:118, explanation:"Pod Topology Spread Constraints distribute Pods across topology domains.", text:"What is the purpose of Pod Topology Spread Constraints?", options:{A:"To encrypt network traffic", B:"To evenly distribute Pods across topology domains", C:"To store configuration", D:"To manage storage"}},
+
+  {round:11, q:93, domain:"Cloud Native App Delivery", correct:"B", page:141, explanation:"Popular CI/CD tools include Spinnaker, GitLab, Jenkins, Jenkins X, Tekton CD, and ArgoCD.", text:"Which of these is a popular CI/CD tool?", options:{A:"Docker", B:"Jenkins", C:"Kubernetes", D:"etcd"}},
+  {round:11, q:94, domain:"Cloud Native App Delivery", correct:"B", page:141, explanation:"A CI/CD pipeline automates build, test, and deployment as scripted steps.", text:"What is a CI/CD pipeline?", options:{A:"A container runtime", B:"An automated sequence of build, test, and deploy steps", C:"A monitoring system", D:"A storage solution"}},
+  {round:11, q:95, domain:"Cloud Native App Delivery", correct:"B", page:143, explanation:"Push-based GitOps triggers changes from CI/CD pipelines.", text:"What is push-based GitOps?", options:{A:"An agent monitors Git inside the cluster", B:"A CI/CD pipeline applies changes directly to the target platform", C:"A manual deployment process", D:"A storage policy"}},
+  {round:11, q:96, domain:"Cloud Native App Delivery", correct:"B", page:143, explanation:"Pull-based GitOps uses an agent inside the cluster that monitors Git.", text:"What is pull-based GitOps?", options:{A:"A CI/CD pipeline applies changes directly", B:"An agent inside the platform monitors Git and applies changes", C:"A manual process", D:"A storage policy"}},
+  {round:11, q:97, domain:"Cloud Native App Delivery", correct:"B", page:147, explanation:"ApplicationSet includes generators and templates.", text:"What are the two main parts of an Argo CD ApplicationSet?", options:{A:"Roles and Bindings", B:"Generators and Template", C:"Pods and Services", D:"Charts and Values"}},
+  {round:11, q:98, domain:"Cloud Native App Delivery", correct:"B", page:150, explanation:"A Matrix Generator combines two or more generators.", text:"What does a Matrix Generator do in Argo CD ApplicationSet?", options:{A:"Deploys to one cluster", B:"Combines two or more generators to create combinations", C:"Monitors applications", D:"Stores container images"}},
+  {round:11, q:99, domain:"Cloud Native App Delivery", correct:"B", page:148, explanation:"A List Generator uses a static list of elements.", text:"What does a List Generator do in Argo CD ApplicationSet?", options:{A:"Discovers clusters automatically", B:"Uses a static list of elements", C:"Scans monorepos", D:"Combines generators"}},
+  {round:11, q:100, domain:"Cloud Native App Delivery", correct:"B", page:149, explanation:"The Git Generator scans a monorepo and creates Applications for each directory or environment.", text:"What does a Git Generator do in Argo CD ApplicationSet?", options:{A:"Uses a static list", B:"Scans a monorepo and creates Applications per directory or environment", C:"Discovers clusters", D:"Combines generators"}},
+
+  {round:12, q:101, domain:"K8s Fundamentals", correct:"B", page:57, explanation:"Minikube, kind, and MicroK8s are tools for creating test clusters.", text:"Which of these is a tool for creating a test Kubernetes cluster?", options:{A:"Jenkins", B:"Minikube", C:"Prometheus", D:"Fluentd"}},
+  {round:12, q:102, domain:"K8s Fundamentals", correct:"B", page:57, explanation:"kubeadm, kops, and kubespray are installers for production-grade clusters.", text:"Which of these is a Kubernetes production installer?", options:{A:"Minikube", B:"kubeadm", C:"kind", D:"MicroK8s"}},
+  {round:12, q:103, domain:"K8s Fundamentals", correct:"A", page:58, explanation:"Amazon EKS is Amazon's managed Kubernetes service.", text:"What is Amazon's managed Kubernetes service called?", options:{A:"EKS", B:"GKE", C:"AKS", D:"DOKS"}},
+  {round:12, q:104, domain:"K8s Fundamentals", correct:"B", page:58, explanation:"Google Kubernetes Engine (GKE) is Google's managed Kubernetes service.", text:"What is Google's managed Kubernetes service called?", options:{A:"EKS", B:"GKE", C:"AKS", D:"DOKS"}},
+  {round:12, q:105, domain:"K8s Fundamentals", correct:"B", page:115, explanation:"Horizontal Pod Autoscaler is not enabled by default. It requires metrics-server.", text:"What must be installed to use the Horizontal Pod Autoscaler?", options:{A:"Helm", B:"metrics-server", C:"Prometheus", D:"Grafana"}},
+  {round:12, q:106, domain:"K8s Fundamentals", correct:"B", page:124, explanation:"Taints have three effects: NoSchedule, PreferNoSchedule, and NoExecute.", text:"What are the three taint effects in Kubernetes?", options:{A:"Allow, Deny, Warn", B:"NoSchedule, PreferNoSchedule, NoExecute", C:"Start, Stop, Restart", D:"Read, Write, Execute"}},
+  {round:12, q:107, domain:"K8s Fundamentals", correct:"B", page:126, explanation:"Security in Kubernetes must begin at system design time, not after deployment.", text:"When should security begin in Kubernetes?", options:{A:"After deployment", B:"At system design time", C:"When a breach occurs", D:"During monitoring"}},
+  {round:12, q:108, domain:"K8s Fundamentals", correct:"B", page:173, explanation:"Spot instances use excess cloud capacity and can be reclaimed with little notice.", text:"What are spot instances in cloud cost management?", options:{A:"Guaranteed long-term instances", B:"Discounted instances that can be reclaimed with little notice", C:"Reserved instances", D:"On-demand instances"}}
+];
+
+// ===== SETTINGS =====
+var SETTINGS_KEY = 'kcna_settings';
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || { timer:false, shuffle:false, weighted:false, weakOnly:false }; } catch(e) { return { timer:false, shuffle:false, weighted:false, weakOnly:false }; }
+}
+function saveSettings(s) { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch(e) {} }
+function toggleSetting(key) {
+  var s = getSettings();
+  s[key] = !s[key];
+  saveSettings(s);
+  render();
+}
+
+// ===== STATE =====
+var state = { view:'home', currentRound:null, questions:[], answers:{}, notes:{}, lastAttempt:null, startTime:null, timerInterval:null, timeElapsed:0, isMock:false };
+
+// ===== STORAGE =====
+function getAttempts() { try { return JSON.parse(localStorage.getItem('kcna_attempts')) || []; } catch(e) { return []; } }
+function saveAttempt(a) {
+  try {
+    var list = getAttempts();
+    list.push(a);
+    localStorage.setItem('kcna_attempts', JSON.stringify(list));
+  } catch(e) {}
+}
+function getWeak() { try { return JSON.parse(localStorage.getItem('kcna_weak')) || {}; } catch(e) { return {}; } }
+function getNotes() { try { return JSON.parse(localStorage.getItem('kcna_notes')) || {}; } catch(e) { return {}; } }
+function saveNote(qNum, text) {
+  var n = getNotes();
+  if (text.trim() === '') delete n[qNum]; else n[qNum] = text;
+  try { localStorage.setItem('kcna_notes', JSON.stringify(n)); } catch(e) {}
+}
+function clearAll() {
+  try {
+    localStorage.removeItem('kcna_attempts');
+    localStorage.removeItem('kcna_weak');
+    localStorage.removeItem('kcna_notes');
+    localStorage.removeItem(SETTINGS_KEY);
+  } catch(e) {}
+}
+
+// ===== WEIGHTED PICK =====
+function domainWeight(domain) {
+  if (domain === 'K8s Fundamentals') return 44;
+  if (domain === 'Container Orchestration') return 28;
+  if (domain === 'Cloud Native App Delivery') return 16;
+  if (domain === 'Cloud Native Architecture') return 12;
+  return 10;
+}
+function pickWeighted(count, weakOnly) {
+  var pool = QUESTIONS.slice();
+  if (weakOnly) {
+    var weak = getWeak();
+    var weakNums = Object.keys(weak).map(function(k){ return parseInt(k); });
+    pool = pool.filter(function(q){ return weakNums.indexOf(q.q) !== -1; });
+    if (pool.length < count) pool = QUESTIONS.slice();
+  }
+  var weighted = [];
+  pool.forEach(function(q){ weighted.push({ q:q, w: domainWeight(q.domain) }); });
+  var picked = [];
+  while (picked.length < count && weighted.length > 0) {
+    var totalW = weighted.reduce(function(s,x){ return s + x.w; }, 0);
+    var r = Math.random() * totalW;
+    var acc = 0;
+    for (var i = 0; i < weighted.length; i++) {
+      acc += weighted[i].w;
+      if (r <= acc) {
+        picked.push(weighted[i].q);
+        weighted.splice(i, 1);
+        break;
+      }
+    }
+  }
+  return picked;
+}
+function shuffleArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+// ===== TIMER =====
+function startTimer() {
+  state.startTime = Date.now();
+  state.timeElapsed = 0;
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(function() {
+    state.timeElapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    var el = document.getElementById('timerDisplay');
+    if (el) {
+      var m = Math.floor(state.timeElapsed / 60);
+      var s = state.timeElapsed % 60;
+      el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      if (state.timeElapsed > 900) el.classList.add('warning');
+    }
+  }, 1000);
+}
+function stopTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+  state.timeElapsed = Math.floor((Date.now() - state.startTime) / 1000);
+}
+
+// ===== RENDER =====
+function render() {
+  var app = document.getElementById('app');
+  if (state.view === 'home') app.innerHTML = homeView();
+  else if (state.view === 'quiz') app.innerHTML = quizView();
+  else if (state.view === 'results') app.innerHTML = resultsView();
+  else if (state.view === 'history') app.innerHTML = historyView();
+  else if (state.view === 'weak') app.innerHTML = weakView();
+  else if (state.view === 'notes') app.innerHTML = notesView();
+  window.scrollTo(0, 0);
+}
+
+function homeView() {
+  var attempts = getAttempts();
+  var s = getSettings();
+  var html = '<h1>KCNA Tracker</h1>';
+  html += '<div class="subtitle">LFS250 Practice — 120 questions</div>';
+  html += '<h2>Settings</h2>';
+  html += '<div class="toggle-row"><span>⏱ Timer (90 sec/question)</span><label class="toggle"><input type="checkbox" ' + (s.timer?'checked':'') + ' onchange="toggleSetting(\'timer\')"><span class="slider"></span></label></div>';
+  html += '<div class="toggle-row"><span>🔀 Shuffle within round</span><label class="toggle"><input type="checkbox" ' + (s.shuffle?'checked':'') + ' onchange="toggleSetting(\'shuffle\')"><span class="slider"></span></label></div>';
+  html += '<div class="toggle-row"><span>⚖️ Weighted random (exam distribution)</span><label class="toggle"><input type="checkbox" ' + (s.weighted?'checked':'') + ' onchange="toggleSetting(\'weighted\')"><span class="slider"></span></label></div>';
+  html += '<div class="toggle-row"><span>🎯 Weak-only mode</span><label class="toggle"><input type="checkbox" ' + (s.weakOnly?'checked':'') + ' onchange="toggleSetting(\'weakOnly\')"><span class="slider"></span></label></div>';
+  html += '<h2>Practice</h2>';
+  html += '<button class="menu-btn" onclick="startMockExam()">📝 Mock Exam (60 Qs)</button>';
+  for (var r = 1; r <= 12; r++) {
+    var roundAttempts = attempts.filter(function(a){ return a.round === r; });
+    var best = roundAttempts.length > 0 ? Math.max.apply(null, roundAttempts.map(function(a){ return a.score; })) : null;
+    var total = QUESTIONS.filter(function(q){ return q.round === r; }).length;
+    var badge = best !== null ? '<span class="badge">' + best + '/' + total + '</span>' : '';
+    html += '<button class="menu-btn" onclick="startRound(' + r + ')">Round ' + r + ' ' + badge + '</button>';
+  }
+  html += '<h2>Progress</h2>';
+  html += '<button class="menu-btn" onclick="state.view=\'history\';render();">📊 View History</button>';
+  html += '<button class="menu-btn" onclick="state.view=\'weak\';render();">🎯 Weak Topics</button>';
+  html += '<button class="menu-btn" onclick="state.view=\'notes\';render();">📝 My Notes</button>';
+  html += '<button class="menu-btn" onclick="exportNotes()">📤 Export Study Guide</button>';
+  html += '<h2>Reset</h2>';
+  html += '<button class="btn btn-danger" onclick="if(confirm(\'Delete ALL progress?\')){clearAll();render();}">Clear All Data</button>';
+  return html;
+}
+
+function startRound(n) {
+  var s = getSettings();
+  var qs = QUESTIONS.filter(function(q){ return q.round === n; });
+  if (s.weighted) {
+    qs = pickWeighted(qs.length, s.weakOnly);
+  } else if (s.shuffle) {
+    qs = shuffleArray(qs);
+  }
+  state.view = 'quiz';
+  state.currentRound = n;
+  state.isMock = false;
+  state.questions = qs;
+  state.answers = {};
+  state.notes = {};
+  if (s.timer) startTimer(); else stopTimer();
+  render();
+}
+
+function startMockExam() {
+  var qs = pickWeighted(60, false);
+  state.view = 'quiz';
+  state.currentRound = 'MOCK';
+  state.isMock = true;
+  state.questions = qs;
+  state.answers = {};
+  state.notes = {};
+  startTimer();
+  render();
+}
+
+function quizView() {
+  var s = getSettings();
+  var html = '<div class="header">';
+  html += '<button class="back-btn" onclick="if(confirm(\'Leave?\')){stopTimer();state.view=\'home\';render();}">← Back</button>';
+  html += '<strong>' + (state.isMock ? 'Mock Exam' : 'Round ' + state.currentRound) + '</strong>';
+  if (s.timer || state.isMock) html += '<span class="timer-display" id="timerDisplay">00:00</span>';
+  html += '</div>';
+  state.questions.forEach(function(q){
+    html += '<div class="question">';
+    html += '<span class="domain-tag">' + q.domain + '</span>';
+    html += '<h3>Q' + q.q + '. ' + q.text + '</h3>';
+    Object.keys(q.options).forEach(function(k){
+      var sel = state.answers[q.q] === k ? 'selected' : '';
+      var chk = state.answers[q.q] === k ? 'checked' : '';
+      html += '<label class="' + sel + '" onclick="pick(' + q.q + ',\'' + k + '\',this)">';
+      html += '<input type="radio" name="q' + q.q + '" ' + chk + '> ' + k + '. ' + q.options[k];
+      html += '</label>';
+    });
+    html += '</div>';
+  });
+  html += '<button class="btn" onclick="submitRound()">Submit</button>';
+  return html;
+}
+
+function pick(qNum, val, el) {
+  state.answers[qNum] = val;
+  var parent = el.parentElement;
+  var labels = parent.querySelectorAll('label');
+  for (var i = 0; i < labels.length; i++) labels[i].classList.remove('selected');
+  el.classList.add('selected');
+}
+
+function submitRound() {
+  stopTimer();
+  var qs = state.questions;
+  var score = 0;
+  var domainStats = {};
+  var missed = [];
+  var review = '';
+  var existingNotes = getNotes();
+
+  qs.forEach(function(q){
+    var userAns = state.answers[q.q] || 'No answer';
+    var ok = userAns === q.correct;
+    if (!domainStats[q.domain]) domainStats[q.domain] = { correct:0, total:0 };
+    domainStats[q.domain].total++;
+    if (ok) { score++; domainStats[q.domain].correct++; }
+    else { missed.push({ q:q.q, text:q.text, page:q.page, domain:q.domain, correct:q.correct }); }
+
+    review += '<div class="review-item ' + (ok?'correct':'wrong') + '">';
+    review += '<div class="label">Q' + q.q + ' — ' + (ok?'✅ Correct':'❌ Wrong') + '</div>';
+    review += '<div style="margin-top:6px;font-weight:600;">' + q.text + '</div>';
+    review += '<div style="margin-top:8px;font-size:14px;">Your answer: ' + userAns + ' · Correct: ' + q.correct + '</div>';
+    review += '<div class="explanation"><strong>Explanation:</strong> ' + q.explanation + '<br><strong>Page:</strong> ' + q.page + '</div>';
+    if (!ok) {
+      var existing = existingNotes[q.q] || '';
+      review += '<div class="note-box"><textarea placeholder="Write your study note for this question..." id="note_' + q.q + '" onchange="saveNote(' + q.q + ', this.value)">' + existing.replace(/</g,'&lt;') + '</textarea></div>';
+    }
+    review += '</div>';
+  });
+
+  var attempt = {
+    round: state.currentRound,
+    date: new Date().toISOString(),
+    score: score,
+    total: qs.length,
+    timeElapsed: state.timeElapsed,
+    domainStats: domainStats,
+    missed: missed,
+    review: review
+  };
+  saveAttempt(attempt);
+
+  var weak = getWeak();
+  missed.forEach(function(m){ weak[m.q] = (weak[m.q]||0)+1; });
+  try { localStorage.setItem('kcna_weak', JSON.stringify(weak)); } catch(e) {}
+
+  state.view = 'results';
+  state.lastAttempt = attempt;
+  render();
+}
+
+function resultsView() {
+  var a = state.lastAttempt;
+  var pct = Math.round((a.score/a.total)*100);
+  var passed = pct >= 75;
+  var mins = Math.floor(a.timeElapsed / 60);
+  var secs = a.timeElapsed % 60;
+  var timeStr = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+  var avgSec = a.total > 0 ? Math.round(a.timeElapsed / a.total) : 0;
+  var html = '<div class="results">';
+  html += '<h2>' + (a.round === 'MOCK' ? 'Mock Exam' : 'Round ' + a.round) + ' Results</h2>';
+  html += '<div class="score-box ' + (passed?'pass':'fail') + '">' + a.score + ' / ' + a.total + ' (' + pct + '%)</div>';
+  html += '<div style="text-align:center;font-size:14px;color:#666;margin-bottom:20px;">Time: ' + timeStr + ' · Avg ' + avgSec + 's per question</div>';
+  html += '<div style="text-align:center;font-size:16px;color:#666;margin-bottom:20px;">' + (passed ? '✅ PASS' : '❌ BELOW PASS') + '</div>';
+  html += '<h3>Domain Breakdown</h3>';
+  Object.keys(a.domainStats).forEach(function(d){
+    var s = a.domainStats[d];
+    var dpct = Math.round((s.correct/s.total)*100);
+    html += '<div class="domain-row"><span>' + d + '</span><span><strong>' + s.correct + '/' + s.total + '</strong> (' + dpct + '%)</span></div>';
+  });
+  html += '<div class="focus-list"><h3>🎯 Where to Focus</h3>';
+  if (a.missed.length === 0) {
+    html += '<p>Perfect. Move on.</p>';
+  } else {
+    html += '<ul>';
+    a.missed.forEach(function(m){
+      html += '<li><strong>Q' + m.q + '</strong> — ' + m.text + '<br><span style="color:#666;font-size:13px;">Page ' + m.page + '</span></li>';
+    });
+    html += '</ul>';
+  }
+  html += '</div>';
+  html += '<h3 style="margin-top:24px;">Review + Notes</h3>';
+  html += a.review;
+  html += '<button class="btn" onclick="state.view=\'home\';render();">← Home</button>';
+  html += '</div>';
+  return html;
+}
+
+function historyView() {
+  var attempts = getAttempts();
+  var html = '<div class="header"><button class="back-btn" onclick="state.view=\'home\';render();">← Back</button><strong>History</strong><span></span></div>';
+  if (attempts.length === 0) {
+    html += '<div class="empty">No attempts yet.</div>';
+  } else {
+    for (var r = 1; r <= 12; r++) {
+      var roundAttempts = attempts.filter(function(a){ return a.round === r; });
+      if (roundAttempts.length === 0) continue;
+      html += '<h2>Round ' + r + '</h2>';
+      roundAttempts.forEach(function(a){
+        var pct = Math.round((a.score/a.total)*100);
+        var d = new Date(a.date).toLocaleString();
+        html += '<div class="history-item"><div><div class="date">' + d + '</div>';
+        html += '<div class="score ' + (pct>=75?'pass':'fail') + '">' + a.score + '/' + a.total + ' (' + pct + '%)</div></div>';
+        html += '<div style="font-size:13px;color:#666;">' + a.missed.length + ' missed</div></div>';
+      });
+    }
+    var mockAttempts = attempts.filter(function(a){ return a.round === 'MOCK'; });
+    if (mockAttempts.length > 0) {
+      html += '<h2>Mock Exams</h2>';
+      mockAttempts.forEach(function(a){
+        var pct = Math.round((a.score/a.total)*100);
+        var d = new Date(a.date).toLocaleString();
+        html += '<div class="history-item"><div><div class="date">' + d + '</div>';
+        html += '<div class="score ' + (pct>=75?'pass':'fail') + '">' + a.score + '/' + a.total + ' (' + pct + '%)</div></div>';
+        html += '<div style="font-size:13px;color:#666;">' + a.missed.length + ' missed</div></div>';
+      });
+    }
+  }
+  return html;
+}
+
+function weakView() {
+  var weak = getWeak();
+  var entries = Object.keys(weak).map(function(k){ return [k, weak[k]]; }).sort(function(a,b){ return b[1] - a[1]; });
+  var html = '<div class="header"><button class="back-btn" onclick="state.view=\'home\';render();">← Back</button><strong>Weak Topics</strong><span></span></div>';
+  if (entries.length === 0) {
+    html += '<div class="empty">No weak topics yet.</div>';
+  } else {
+    entries.forEach(function(entry){
+      var qNum = entry[0]; var count = entry[1];
+      var q = null;
+      for (var i = 0; i < QUESTIONS.length; i++) { if (QUESTIONS[i].q === parseInt(qNum)) { q = QUESTIONS[i]; break; } }
+      if (!q) return;
+      html += '<div class="weak-topic">';
+      html += '<div><strong>Q' + q.q + '</strong> — ' + q.text + '</div>';
+      html += '<div style="margin-top:6px;font-size:13px;"><span class="count">Missed ' + count + '×</span> · Page ' + q.page + ' · ' + q.domain + '</div>';
+      html += '<div style="margin-top:6px;font-size:13px;color:#28a745;">Correct: <strong>' + q.correct + '</strong></div>';
+      html += '</div>';
+    });
+  }
+  return html;
+}
+
+function notesView() {
+  var notes = getNotes();
+  var keys = Object.keys(notes);
+  var html = '<div class="header"><button class="back-btn" onclick="state.view=\'home\';render();">← Back</button><strong>My Notes</strong><span></span></div>';
+  if (keys.length === 0) {
+    html += '<div class="empty">No notes yet. Take a round and write notes on questions you miss.</div>';
+  } else {
+    keys.sort(function(a,b){ return parseInt(a) - parseInt(b); });
+    keys.forEach(function(qNum){
+      var q = null;
+      for (var i = 0; i < QUESTIONS.length; i++) { if (QUESTIONS[i].q === parseInt(qNum)) { q = QUESTIONS[i]; break; } }
+      if (!q) return;
+      html += '<div class="weak-topic" style="background:#eef3ff;border-left:4px solid #326ce5;">';
+      html += '<div><strong>Q' + q.q + '</strong> — ' + q.text + '</div>';
+      html += '<div style="margin-top:6px;font-size:13px;color:#666;">Page ' + q.page + ' · Correct: ' + q.correct + '</div>';
+      html += '<div style="margin-top:8px;font-size:14px;white-space:pre-wrap;">' + notes[qNum].replace(/</g,'&lt;') + '</div>';
+      html += '</div>';
+    });
+  }
+  return html;
+}
+
+function exportNotes() {
+  var notes = getNotes();
+  var weak = getWeak();
+  var text = 'KCNA STUDY GUIDE\nGenerated: ' + new Date().toLocaleString() + '\n\n';
+  var keys = Object.keys(notes);
+  if (keys.length === 0) {
+    text += 'No notes written yet.\n';
+  } else {
+    keys.sort(function(a,b){ return parseInt(a) - parseInt(b); });
+    keys.forEach(function(qNum){
+      var q = null;
+      for (var i = 0; i < QUESTIONS.length; i++) { if (QUESTIONS[i].q === parseInt(qNum)) { q = QUESTIONS[i]; break; } }
+      if (!q) return;
+      var missed = weak[qNum] || 0;
+      text += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+      text += 'Q' + q.q + ': ' + q.text + '\n';
+      text += 'Domain: ' + q.domain + ' | Page ' + q.page + ' | Missed ' + missed + '×\n\n';
+      text += 'MY NOTE:\n' + notes[qNum] + '\n\n';
+      text += 'CORRECT ANSWER: ' + q.correct + ') ' + q.options[q.correct] + '\n\n';
+    });
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){
+      alert('Study guide copied to clipboard! Paste into Notes app or email.');
+    }).catch(function(){
+      showExportFallback(text);
+    });
+  } else {
+    showExportFallback(text);
+  }
+}
+
+function showExportFallback(text) {
+  var w = window.open('', '_blank');
+  if (w) {
+    w.document.write('<pre style="font-family:monospace;white-space:pre-wrap;padding:20px;">' + text.replace(/</g,'&lt;') + '</pre>');
+    w.document.title = 'KCNA Study Guide';
+  } else {
+    alert('Could not open export. Please allow pop-ups.');
+  }
+}
+
+// ===== BOOT =====
+render();
+</script>
+</body>
+</html>
